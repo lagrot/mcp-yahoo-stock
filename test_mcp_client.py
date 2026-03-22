@@ -1,5 +1,5 @@
 """
-Comprehensive test client to verify dividends and all tools.
+Test client to debug missing dividends for New Wave Group.
 """
 import asyncio
 import json
@@ -28,23 +28,25 @@ async def run_test():
         # Handshake
         await send({
             "jsonrpc": "2.0", "id": 1, "method": "initialize",
-            "params": {
-                "protocolVersion": "2024-11-05", "capabilities": {},
-                "clientInfo": {"name": "test", "version": "1.0.0"}
-            }
+            "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0.0"}}
         })
         await receive()
         await send({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
 
-        print("\n--- Testing Dividends (Investor AB - INVE-B.ST) ---")
+        print("\n--- Testing Stock Analysis (NEWA-B.ST) ---")
         await send({
             "jsonrpc": "2.0", "id": 2, "method": "tools/call",
-            "params": {"name": "analyze_stock_tool", "arguments": {"symbol": "INVE-B.ST"}}
+            "params": {"name": "analyze_stock_tool", "arguments": {"symbol": "NEWA-B.ST"}}
         })
+        
         res = await receive()
-        data = json.loads(res["result"]["content"][0]["text"])
-        print(f"Symbol: {data['symbol']}")
-        print(f"Dividend Data: {data['dividends']}")
+        if "error" in res:
+            print(f"Error: {res['error']}")
+        else:
+            data = json.loads(res["result"]["content"][0]["text"])
+            print(f"Symbol: {data['symbol']}")
+            # Print the entire dividends object to see exactly what we are getting
+            print(f"Dividend Data: {json.dumps(data.get('dividends'), indent=2)}")
 
     finally:
         process.terminate()

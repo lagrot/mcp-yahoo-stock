@@ -105,13 +105,27 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     yield_val = dividend_data.get("yield")
     payout_val = dividend_data.get("payout_ratio")
     
+    # Logic to fix potential basis point errors from yfinance (e.g., 385.0 instead of 3.85)
+    formatted_yield = None
+    if yield_val is not None:
+        formatted_yield = round(yield_val * 100, 2)
+        if formatted_yield > 100:
+            formatted_yield = round(formatted_yield / 100, 2)
+
+    formatted_5y_yield = None
+    avg_5y = dividend_data.get("five_year_avg_yield")
+    if avg_5y is not None:
+        formatted_5y_yield = round(avg_5y * 100, 2) # Yahoo usually returns this as 3.85 for 3.85%?
+        # If it's still massive (like 297.0), normalize it
+        if formatted_5y_yield > 100:
+             formatted_5y_yield = round(formatted_5y_yield / 100, 2)
+
     dividends = {
-        "yield_pct": round(yield_val * 100, 2) if yield_val is not None else None,
+        "yield_pct": formatted_yield,
         "annual_rate": dividend_data.get("rate"),
         "payout_ratio_pct": round(payout_val * 100, 2) if payout_val is not None else None,
         "ex_dividend_date": _format_timestamp(dividend_data.get("ex_dividend_date")),
-        "five_year_avg_yield_pct": round(dividend_data.get("five_year_avg_yield", 0) * 100, 2) 
-            if dividend_data.get("five_year_avg_yield") else None,
+        "five_year_avg_yield_pct": formatted_5y_yield,
     }
 
     # 6. Simple sentiment
