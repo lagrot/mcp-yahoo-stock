@@ -3,9 +3,6 @@ MCP Server implementation using FastMCP with robust logging and debug support.
 """
 
 import argparse
-import contextlib
-import logging
-import os
 import sys
 from typing import Any
 
@@ -13,32 +10,7 @@ from mcp.server.fastmcp import FastMCP
 
 from src.data import yfinance_client
 from src.services import stock_service
-
-# -----------------------------------------------------------------------------
-# Logging Configuration
-# -----------------------------------------------------------------------------
-LOG_FILE = "mcp_server.log"
-
-
-def setup_logging(debug: bool = False):
-    """Set up file-based logging."""
-    level = logging.DEBUG if debug else logging.INFO
-
-    if os.path.exists(LOG_FILE):
-        with contextlib.suppress(OSError):
-            os.remove(LOG_FILE)
-
-    logging.basicConfig(
-        filename=LOG_FILE,
-        level=level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
-    # Note: We keep the file open for the duration of the process to capture stderr.
-    # ruff: noqa: SIM115
-    sys.stderr = open(LOG_FILE, "a", buffering=1)
-    logging.info("MCP Server starting...")
-
+from src.utils.logging_setup import setup_logging
 
 # -----------------------------------------------------------------------------
 # Server Setup
@@ -50,9 +22,10 @@ mcp = FastMCP("Stock-Analysis")
 def search_symbol_tool(query: str) -> dict[str, Any]:
     """
     Search for a stock ticker by company name or query.
-    
+
     Use this if you are not sure about the exact ticker symbol or exchange.
     """
+    import logging
     logging.info(f"Tool call: search_symbol_tool(query={query})")
     try:
         results = yfinance_client.search_symbol(query)
@@ -66,12 +39,13 @@ def search_symbol_tool(query: str) -> dict[str, Any]:
 def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
     Perform a deep dive analysis on a SPECIFIC individual company ticker.
-    
-    Returns price trends, volatility, key financials (Revenue, Net Income, Margins), 
+
+    Returns price trends, volatility, key financials (Revenue, Net Income, Margins),
     analyst recommendations, and current MARKET STATUS (OPEN/CLOSED).
-    
+
     Note: If market_status is 'CLOSED', the data refers to the 'Last Close'.
     """
+    import logging
     logging.info(f"Tool call: analyze_stock_tool(symbol={symbol})")
     try:
         return stock_service.analyze_stock(symbol, period)
@@ -84,10 +58,11 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
 def get_market_overview_tool() -> dict[str, Any]:
     """
     Show the general market situation (Stockholm, USA, Germany) and USD/SEK rate.
-    
+
     Provides status for major indices and explicitly states if markets are OPEN or CLOSED.
     Always check 'market_status' before describing the market as "up" or "down" today.
     """
+    import logging
     logging.info("Tool call: get_market_overview_tool")
     try:
         return stock_service.get_market_overview()
@@ -107,9 +82,11 @@ def main():
     setup_logging(debug=args.debug)
 
     try:
+        import logging
         logging.info("Running MCP server on stdio...")
         mcp.run()
     except Exception as e:
+        import logging
         logging.critical(f"Server crashed: {str(e)}", exc_info=True)
         sys.exit(1)
 

@@ -14,65 +14,12 @@ import requests
 import yfinance as yf
 
 from src.data.cache import get_cached_history, init_db, save_history
+from src.utils.serialization import serialize_dict, serialize_records, serialize_value
 
 # Constants
 SEARCH_URL = "https://query2.finance.yahoo.com/v1/finance/search"
 DEFAULT_USER_AGENT = "Mozilla/5.0"
 CACHE_VALIDITY_DAYS = 1
-
-
-# -----------------------------------------------------------------------------
-# Serialization Helpers
-# -----------------------------------------------------------------------------
-
-
-def _serialize_value(value: Any) -> Any:
-    """
-    Convert pandas/numpy types into JSON-safe values.
-
-    This ensures compatibility with the MCP JSON-RPC protocol.
-    """
-    try:
-        # pandas Timestamp → ISO string
-        if hasattr(value, "isoformat"):
-            return value.isoformat()
-
-        # numpy types → native Python
-        if hasattr(value, "item"):
-            return value.item()
-
-    except Exception:
-        pass
-
-    return value
-
-
-def _serialize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Serialize a list of dictionaries for JSON compatibility."""
-    return [{k: _serialize_value(v) for k, v in row.items()} for row in records]
-
-
-def _serialize_dict(data: dict[Any, dict[Any, Any]]) -> dict[str, dict[str, Any]]:
-    """
-    Serialize nested dictionaries (used for financial statements).
-
-    Handles non-string keys and complex values found in pandas outputs.
-    """
-    serialized: dict[str, dict[str, Any]] = {}
-
-    for outer_key, inner_dict in data.items():
-        safe_outer_key = str(outer_key)
-        serialized[safe_outer_key] = {}
-
-        for inner_key, value in inner_dict.items():
-            # Convert Timestamp keys → string
-            if hasattr(inner_key, "isoformat"):
-                safe_inner_key = inner_key.isoformat()
-            else:
-                safe_inner_key = str(inner_key)
-            serialized[safe_outer_key][safe_inner_key] = _serialize_value(value)
-
-    return serialized
 
 
 # -----------------------------------------------------------------------------
@@ -190,7 +137,7 @@ def _fetch_history_from_api(symbol: str, period: str) -> list[dict[str, Any]]:
 
     # Reset index to include 'Date' as a column, then serialize
     records = df.reset_index().to_dict(orient="records")
-    return _serialize_records(records)
+    return serialize_records(records)
 
 
 def get_history(symbol: str, period: str = "3mo") -> list[dict[str, Any]]:
@@ -238,10 +185,10 @@ def get_financials(symbol: str) -> dict[str, Any]:
 
     return {
         "income_statement": (
-            _serialize_dict(income_stmt.to_dict()) if not income_stmt.empty else {}
+            serialize_dict(income_stmt.to_dict()) if not income_stmt.empty else {}
         ),
         "balance_sheet": (
-            _serialize_dict(balance_sheet.to_dict()) if not balance_sheet.empty else {}
+            serialize_dict(balance_sheet.to_dict()) if not balance_sheet.empty else {}
         ),
     }
 
@@ -255,7 +202,7 @@ def get_recommendations(symbol: str) -> list[dict[str, Any]]:
         return []
 
     records = recs.tail(10).reset_index().to_dict(orient="records")
-    return _serialize_records(records)
+    return serialize_records(records)
 
 
 def get_news(symbol: str) -> list[dict[str, Any]]:
@@ -263,7 +210,7 @@ def get_news(symbol: str) -> list[dict[str, Any]]:
     ticker = get_ticker(symbol)
     news = ticker.news or []
 
-    return [{k: _serialize_value(v) for k, v in item.items()} for item in news]
+    return [{k: serialize_value(v) for k, v in item.items()} for item in news]
 
 
 # -----------------------------------------------------------------------------

@@ -2,25 +2,11 @@
 Core business logic for stock analysis and market overviews.
 """
 
-import datetime
 import logging
 from typing import Any
 
 from src.data import yfinance_client as yf_client
-
-
-def _format_timestamp(ts: Any) -> str | None:
-    """Safely convert various timestamp formats to ISO string."""
-    if not ts:
-        return None
-    try:
-        if isinstance(ts, (int, float)):
-            return datetime.datetime.fromtimestamp(ts).isoformat()
-        if hasattr(ts, "isoformat"):
-            return ts.isoformat()
-    except Exception:
-        pass
-    return str(ts)
+from src.utils.formatting import format_timestamp
 
 
 def _extract_financial_metrics(financials: dict[str, Any]) -> dict[str, Any]:
@@ -124,7 +110,7 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
         "yield_pct": formatted_yield,
         "annual_rate": dividend_data.get("rate"),
         "payout_ratio_pct": round(payout_val * 100, 2) if payout_val is not None else None,
-        "ex_dividend_date": _format_timestamp(dividend_data.get("ex_dividend_date")),
+        "ex_dividend_date": format_timestamp(dividend_data.get("ex_dividend_date")),
         "five_year_avg_yield_pct": formatted_5y_yield,
     }
 
@@ -140,7 +126,7 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
         "symbol": symbol.upper(),
         "currency": currency,
         "market_status": market_info.get("market_state", "CLOSED"),
-        "last_trade_date": _format_timestamp(market_info.get("last_trade_time")),
+        "last_trade_date": format_timestamp(market_info.get("last_trade_time")),
         "summary": {
             "latest_close": round(latest_close, 2),
             "price_change_percent": round(price_change_pct, 2),
@@ -198,6 +184,6 @@ def get_market_overview() -> dict[str, Any]:
 
     return {
         "market_status": omx_info.get("market_state", "CLOSED"),
-        "last_trading_day": _format_timestamp(omx_info.get("last_trade_time")),
+        "last_trading_day": format_timestamp(omx_info.get("last_trade_time")),
         "market_indices": overview,
     }
