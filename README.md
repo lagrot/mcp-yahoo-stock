@@ -38,14 +38,32 @@ uv sync
 
 ## 🧪 Standalone Testing (WSL / Linux)
 
-Since this is an MCP server, it communicates via `stdin` and `stdout` using JSON-RPC 2.0. To verify the server is working correctly without an LLM client, use the included test script:
-
+### Option A: Automated (Recommended)
+Use the included test script which handles the complex MCP handshake automatically:
 ```bash
-# Run the automated test client
 uv run python test_mcp_client.py
 ```
 
-This script performs the standard MCP handshake, lists tools, and calls the `analyze_stock_tool` for AAPL.
+### Option B: Manual (Raw JSON-RPC)
+Since we use the official protocol, you must perform a "handshake" before calling tools. Run the server:
+`uv run python -m src.mcp.server`
+
+Then, paste these **three messages** in order:
+
+**1. Initialize (The Handshake)**
+```json
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
+```
+
+**2. Initialized Notification**
+```json
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+```
+
+**3. Call the Tool**
+```json
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"analyze_stock_tool","arguments":{"symbol":"AAPL"}}}
+```
 
 ---
 
