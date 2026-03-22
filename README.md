@@ -69,15 +69,20 @@ Then, paste these **three messages** in order:
 
 ## 🤖 Usage with Gemini CLI
 
-To use this with the [Gemini CLI](https://github.com/google/gemini-cli), add it as an MCP tool:
+To use this with the [Gemini CLI](https://github.com/google/gemini-cli), register it as an MCP server. Using the `--project` flag and absolute paths ensures the server is available globally from any directory.
+
+Run this command from your terminal, replacing `<PROJECT_PATH>` with the absolute path where you cloned this repository:
 
 ```bash
-gemini mcp add stock-analysis "uv run python -m src.mcp.server" --trust -s project
+gemini mcp add stock-analysis uv --project <PROJECT_PATH> run env PYTHONPATH=<PROJECT_PATH> python <PROJECT_PATH>/src/mcp/server.py
 ```
 
-Then, you can simply ask:
-* "Analyze Apple stock"
-* "How is NVIDIA performing compared to its recent history?"
+*Note: Replace `<PROJECT_PATH>` with your full path (e.g., `/home/username/git/stock-mcp`).*
+
+Once registered, you can use the analysis tools from any directory:
+```bash
+gemini tool call stock-analysis:analyze_stock_tool '{"symbol": "AAPL", "period": "1mo"}'
+```
 
 ---
 
