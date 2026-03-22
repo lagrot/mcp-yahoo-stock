@@ -1,5 +1,6 @@
 import yfinance as yf
 import datetime
+from src.data.cache import get_cached_history, save_history, init_db
 
 # -------------------------
 # Internal helpers
@@ -55,38 +56,8 @@ def _serialize_dict(data: dict) -> dict:
 # Public API
 # -------------------------
 
-def get_history(symbol: str, period: str = "3mo"):
-    init_db()
-
-    cached = get_cached_history(symbol)
-
-    if cached:
-        last_date = cached[-1]["Date"]
-        last_date_obj = datetime.datetime.fromisoformat(last_date)
-
-        # If data is less than 1 day old → use cache
-        if ()datetime.datetime.now(last_date_obj.tzinfo) - last_date_obj).days < 1:
-            return cached
-
-    # Otherwise fetch fresh
-    ticker = yf.Ticker(symbol)
-    df = ticker.history(period=period)
-
-    if df.empty:
-        raise ValueError(f"No historical data for {symbol}")
-
-    records = _serialize_records(df.reset_index().to_dict(orient="records"))
-
-    save_history(symbol, records)
-
-    return records
-
 def get_ticker(symbol: str):
     return yf.Ticker(symbol)
-
-
-from src.data.cache import get_cached_history, save_history, init_db
-
 
 def get_history(symbol: str, period: str = "3mo"):
     init_db()
@@ -95,10 +66,20 @@ def get_history(symbol: str, period: str = "3mo"):
     cached = get_cached_history(symbol)
 
     if cached:
-        return cached
+        last_date = cached[-1]["Date"]
+        try:
+            last_date_obj = datetime.datetime.fromisoformat(last_date)
+            # If data is less than 1 day old → use cache
+            # Note: yfinance history often has timezone info
+            now = datetime.datetime.now(last_date_obj.tzinfo) if last_date_obj.tzinfo else datetime.datetime.now()
+            if (now - last_date_obj).days < 1:
+                return cached
+        except (ValueError, TypeError):
+            # If date parsing fails, just fetch fresh
+            pass
 
     # 2. Fetch from Yahoo
-    ticker = yf.Ticker(symbol)
+    ticker = get_ticker(symbol)
     df = ticker.history(period=period)
 
     if df.empty:
