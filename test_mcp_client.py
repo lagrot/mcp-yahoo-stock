@@ -1,5 +1,5 @@
 """
-Comprehensive test client to verify market status and all tools.
+Comprehensive test client to verify dividends and all tools.
 """
 import asyncio
 import json
@@ -36,25 +36,15 @@ async def run_test():
         await receive()
         await send({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
 
-        print("\n--- Testing Market Overview (Status Check) ---")
+        print("\n--- Testing Dividends (Investor AB - INVE-B.ST) ---")
         await send({
             "jsonrpc": "2.0", "id": 2, "method": "tools/call",
-            "params": {"name": "get_market_overview_tool", "arguments": {}}
+            "params": {"name": "analyze_stock_tool", "arguments": {"symbol": "INVE-B.ST"}}
         })
-        market_res = await receive()
-        data = json.loads(market_res["result"]["content"][0]["text"])
-        print(f"Market Status: {data['market_status']}")
-        print(f"Last Trading Day: {data['last_trading_day']}")
-
-        print("\n--- Testing Stock Analysis (NVDA Status) ---")
-        await send({
-            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
-            "params": {"name": "analyze_stock_tool", "arguments": {"symbol": "NVDA"}}
-        })
-        stock_res = await receive()
-        data = json.loads(stock_res["result"]["content"][0]["text"])
-        print(f"NVDA Market Status: {data['market_status']}")
-        print(f"Last Trade Date: {data['last_trade_date']}")
+        res = await receive()
+        data = json.loads(res["result"]["content"][0]["text"])
+        print(f"Symbol: {data['symbol']}")
+        print(f"Dividend Data: {data['dividends']}")
 
     finally:
         process.terminate()

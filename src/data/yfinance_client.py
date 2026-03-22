@@ -86,10 +86,26 @@ def get_market_info(symbol: str) -> dict[str, Any]:
         return {
             "market_state": info.get("marketState", "CLOSED"),
             "last_trade_time": info.get("regularMarketTime"),
-            "currency": info.get("currency", "USD")
+            "currency": info.get("currency", "USD"),
         }
     except Exception:
         return {"market_state": "CLOSED", "last_trade_time": None, "currency": "USD"}
+
+
+def get_dividend_data(symbol: str) -> dict[str, Any]:
+    """Fetch dividend yield, rate, and history for a symbol."""
+    ticker = get_ticker(symbol)
+    try:
+        info = ticker.info
+        return {
+            "yield": info.get("dividendYield"),
+            "rate": info.get("dividendRate"),
+            "payout_ratio": info.get("payoutRatio"),
+            "ex_dividend_date": info.get("exDividendDate"),
+            "five_year_avg_yield": info.get("fiveYearAvgDividendYield"),
+        }
+    except Exception:
+        return {}
 
 
 def get_history(symbol: str, period: str = "3mo") -> list[dict[str, Any]]:

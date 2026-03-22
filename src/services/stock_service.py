@@ -63,14 +63,15 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     Perform a comprehensive analysis of a stock symbol.
     """
     logging.info(f"Analyzing stock: {symbol}")
-    
-    # 1. Fetch raw data + Market status
+
+    # 1. Fetch raw data + Market status + Dividends
     history = yf_client.get_history(symbol, period)
     financials = yf_client.get_financials(symbol)
     recommendations = yf_client.get_recommendations(symbol)
     news = yf_client.get_news(symbol)
     market_info = yf_client.get_market_info(symbol)
-    
+    dividend_data = yf_client.get_dividend_data(symbol)
+
     currency = market_info.get("currency", "USD")
 
     # 2. Extract price data
@@ -84,7 +85,7 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     # Basic calculations
     price_change = latest_close - first_close
     price_change_pct = (price_change / first_close) * 100
-    
+
     # 3. Currency Conversion (USD to SEK)
     sek_data = {}
     if currency == "USD":
@@ -92,7 +93,7 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
             usdsek_rate = yf_client.get_current_price("USDSEK=X")
             sek_data = {
                 "latest_close_sek": round(latest_close * usdsek_rate, 2),
-                "usdsek_rate": round(usdsek_rate, 4)
+                "usdsek_rate": round(usdsek_rate, 4),
             }
         except Exception as e:
             logging.error(f"Failed to fetch USDSEK rate: {e}")
@@ -100,7 +101,20 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     # 4. Financial extraction
     key_metrics = _extract_financial_metrics(financials)
 
-    # 5. Simple sentiment
+    # 5. Dividend processing
+    yield_val = dividend_data.get("yield")
+    payout_val = dividend_data.get("payout_ratio")
+    
+    dividends = {
+        "yield_pct": round(yield_val * 100, 2) if yield_val is not None else None,
+        "annual_rate": dividend_data.get("rate"),
+        "payout_ratio_pct": round(payout_val * 100, 2) if payout_val is not None else None,
+        "ex_dividend_date": _format_timestamp(dividend_data.get("ex_dividend_date")),
+        "five_year_avg_yield_pct": round(dividend_data.get("five_year_avg_yield", 0) * 100, 2) 
+            if dividend_data.get("five_year_avg_yield") else None,
+    }
+
+    # 6. Simple sentiment
     positive_keywords = {"gain", "growth", "beat", "strong", "upgrade", "success"}
     sentiment_score = 0
     for article in news:
@@ -118,8 +132,9 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
             "price_change_percent": round(price_change_pct, 2),
             "trend": "up" if price_change > 0 else "down",
             "news_sentiment": "positive" if sentiment_score > 0 else "neutral",
-            **sek_data
+            **sek_data,
         },
+        "dividends": dividends,
         "key_financials": key_metrics,
         "analyst_summary": {
             "total_recommendations": len(recommendations),
@@ -146,7 +161,7 @@ def get_market_overview() -> dict[str, Any]:
     overview = []
     # Check OMX to get the general market state for the overview
     omx_info = yf_client.get_market_info("^OMX")
-    
+
     for symbol, name in indices.items():
         try:
             # Get 5 days of history to calculate 1-day change
@@ -155,18 +170,20 @@ def get_market_overview() -> dict[str, Any]:
                 latest = history[-1]["Close"]
                 prev = history[-2]["Close"]
                 change_pct = ((latest - prev) / prev) * 100
-                
-                overview.append({
-                    "name": name,
-                    "symbol": symbol,
-                    "price": round(latest, 2),
-                    "change_percent": round(change_pct, 2)
-                })
+
+                overview.append(
+                    {
+                        "name": name,
+                        "symbol": symbol,
+                        "price": round(latest, 2),
+                        "change_percent": round(change_pct, 2),
+                    }
+                )
         except Exception as e:
             logging.error(f"Failed to fetch index {symbol}: {e}")
 
     return {
         "market_status": omx_info.get("market_state", "CLOSED"),
         "last_trading_day": _format_timestamp(omx_info.get("last_trade_time")),
-        "market_indices": overview
+        "market_indices": overview,
     }
