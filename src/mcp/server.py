@@ -20,7 +20,7 @@ mcp = FastMCP("Stock-Analysis")
 
 
 @mcp.tool()
-def search_symbol_tool(query: str) -> dict[str, Any]:
+async def search_symbol_tool(query: str) -> dict[str, Any]:
     """
     Search for a stock ticker by company name or query.
 
@@ -29,7 +29,7 @@ def search_symbol_tool(query: str) -> dict[str, Any]:
     import logging
     logging.info(f"Tool call: search_symbol_tool(query={query})")
     try:
-        results = yfinance_client.search_symbol(query)
+        results = await yfinance_client.search_symbol(query)
         return {"query": query, "results": results}
     except RateLimitError:
         return {"error": "Rate limit exceeded. Please try again later.", "code": 429}
@@ -41,7 +41,7 @@ def search_symbol_tool(query: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
+async def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
     Perform a deep dive analysis on a SPECIFIC individual company ticker.
 
@@ -53,7 +53,7 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     import logging
     logging.info(f"Tool call: analyze_stock_tool(symbol={symbol})")
     try:
-        return stock_service.analyze_stock(symbol, period)
+        return await stock_service.analyze_stock(symbol, period)
     except DataNotFoundError:
         return {"error": f"No data found for symbol: {symbol}", "code": 404, "symbol": symbol}
     except RateLimitError:
@@ -65,9 +65,8 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
         return {"error": "An unexpected error occurred", "details": str(e), "symbol": symbol}
 
 
-
 @mcp.tool()
-def get_market_overview_tool() -> dict[str, Any]:
+async def get_market_overview_tool() -> dict[str, Any]:
     """
     Show the general market situation (Stockholm, USA, Germany) and USD/SEK rate.
 
@@ -77,10 +76,10 @@ def get_market_overview_tool() -> dict[str, Any]:
     import logging
     logging.info("Tool call: get_market_overview_tool")
     try:
-        return stock_service.get_market_overview()
+        return await stock_service.get_market_overview()
     except Exception as e:
         logging.error(f"Error in get_market_overview_tool: {str(e)}", exc_info=True)
-        return {"error": str(e)}
+        return {"error": "An unexpected error occurred", "details": str(e)}
 
 
 # -----------------------------------------------------------------------------

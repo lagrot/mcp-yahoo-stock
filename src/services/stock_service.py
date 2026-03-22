@@ -2,6 +2,7 @@
 Core business logic for stock analysis and market overviews.
 """
 
+import asyncio
 import logging
 from typing import Any
 
@@ -44,19 +45,29 @@ def _extract_financial_metrics(financials: dict[str, Any]) -> dict[str, Any]:
     return metrics
 
 
-def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
+async def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
     Perform a comprehensive analysis of a stock symbol.
     """
     logging.info(f"Analyzing stock: {symbol}")
 
     # 1. Fetch raw data + Market status + Dividends
-    history = yf_client.get_history(symbol, period)
-    financials = yf_client.get_financials(symbol)
-    recommendations = yf_client.get_recommendations(symbol)
-    news = yf_client.get_news(symbol)
-    market_info = yf_client.get_market_info(symbol)
-    dividend_data = yf_client.get_dividend_data(symbol)
+    # Run independent API calls concurrently
+    (
+        history,
+        financials,
+        recommendations,
+        news,
+        market_info,
+        dividend_data,
+    ) = await asyncio.gather(
+        yf_client.get_history(symbol, period),
+        yf_client.get_financials(symbol),
+        yf_client.get_recommendations(symbol),
+        yf_client.get_news(symbol),
+        yf_client.get_market_info(symbol),
+        yf_client.get_dividend_data(symbol),
+    )
 
     currency = market_info.get("currency", "USD")
 
@@ -76,7 +87,7 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     sek_data = {}
     if currency == "USD":
         try:
-            usdsek_rate = yf_client.get_current_price("USDSEK=X")
+            usdsek_rate = await yf_client.get_current_price("USDSEK=X")
             sek_data = {
                 "latest_close_sek": round(latest_close * usdsek_rate, 2),
                 "usdsek_rate": round(usdsek_rate, 4),
@@ -144,7 +155,7 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     }
 
 
-def get_market_overview() -> dict[str, Any]:
+async def get_market_overview() -> dict[str, Any]:
     """
     Fetch status of major global and local (Swedish) indices.
     """
@@ -160,27 +171,34 @@ def get_market_overview() -> dict[str, Any]:
 
     overview = []
     # Check OMX to get the general market state for the overview
-    omx_info = yf_client.get_market_info("^OMX")
+    omx_info = await yf_client.get_market_info("^OMX")
 
-    for symbol, name in indices.items():
+    # Create tasks for all concurrent index fetches
+    tasks = []
+    async def fetch_index(symbol, name):
         try:
             # Get 5 days of history to calculate 1-day change
-            history = yf_client.get_history(symbol, period="5d")
+            history = await yf_client.get_history(symbol, period="5d")
             if len(history) >= 2:
                 latest = history[-1]["Close"]
                 prev = history[-2]["Close"]
                 change_pct = ((latest - prev) / prev) * 100
 
-                overview.append(
-                    {
-                        "name": name,
-                        "symbol": symbol,
-                        "price": round(latest, 2),
-                        "change_percent": round(change_pct, 2),
-                    }
-                )
+                return {
+                    "name": name,
+                    "symbol": symbol,
+                    "price": round(latest, 2),
+                    "change_percent": round(change_pct, 2),
+                }
         except Exception as e:
             logging.error(f"Failed to fetch index {symbol}: {e}")
+        return None
+
+    for symbol, name in indices.items():
+        tasks.append(fetch_index(symbol, name))
+    
+    results = await asyncio.gather(*tasks)
+    overview = [r for r in results if r is not None]
 
     return {
         "market_status": omx_info.get("market_state", "CLOSED"),
