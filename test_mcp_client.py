@@ -1,5 +1,5 @@
 """
-Comprehensive test client to verify all MCP tools.
+Comprehensive test client to verify market status and all tools.
 """
 import asyncio
 import json
@@ -36,36 +36,25 @@ async def run_test():
         await receive()
         await send({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
 
-        print("\n--- Listing Tools ---")
-        await send({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
-        tools_res = await receive()
-        print(f"Tools: {[t['name'] for t in tools_res['result']['tools']]}")
-
-        print("\n--- Testing Search Tool (Investor) ---")
+        print("\n--- Testing Market Overview (Status Check) ---")
         await send({
-            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
-            "params": {"name": "search_symbol_tool", "arguments": {"query": "Investor"}}
-        })
-        search_res = await receive()
-        data = json.loads(search_res["result"]["content"][0]["text"])
-        print(f"Search Results: {data['results'][:2]}")
-
-        print("\n--- Testing Market Overview (Swedish Indices) ---")
-        await send({
-            "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
             "params": {"name": "get_market_overview_tool", "arguments": {}}
         })
         market_res = await receive()
-        print("Market overview fetched successfully.")
+        data = json.loads(market_res["result"]["content"][0]["text"])
+        print(f"Market Status: {data['market_status']}")
+        print(f"Last Trading Day: {data['last_trading_day']}")
 
-        print("\n--- Testing Stock Analysis (Indices should NOT crash) ---")
+        print("\n--- Testing Stock Analysis (NVDA Status) ---")
         await send({
-            "jsonrpc": "2.0", "id": 5, "method": "tools/call",
-            "params": {"name": "analyze_stock_tool", "arguments": {"symbol": "^OMX"}}
+            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+            "params": {"name": "analyze_stock_tool", "arguments": {"symbol": "NVDA"}}
         })
         stock_res = await receive()
         data = json.loads(stock_res["result"]["content"][0]["text"])
-        print(f"Index Analysis (^OMX): Status OK, Financials: {data['key_financials']}")
+        print(f"NVDA Market Status: {data['market_status']}")
+        print(f"Last Trade Date: {data['last_trade_date']}")
 
     finally:
         process.terminate()

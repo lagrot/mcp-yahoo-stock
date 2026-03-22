@@ -2,10 +2,25 @@
 Core business logic for stock analysis and market overviews.
 """
 
+import datetime
 import logging
 from typing import Any
 
 from src.data import yfinance_client as yf_client
+
+
+def _format_timestamp(ts: Any) -> str | None:
+    """Safely convert various timestamp formats to ISO string."""
+    if not ts:
+        return None
+    try:
+        if isinstance(ts, (int, float)):
+            return datetime.datetime.fromtimestamp(ts).isoformat()
+        if hasattr(ts, "isoformat"):
+            return ts.isoformat()
+    except Exception:
+        pass
+    return str(ts)
 
 
 def _extract_financial_metrics(financials: dict[str, Any]) -> dict[str, Any]:
@@ -49,15 +64,14 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
     logging.info(f"Analyzing stock: {symbol}")
     
-    # 1. Fetch raw data
+    # 1. Fetch raw data + Market status
     history = yf_client.get_history(symbol, period)
     financials = yf_client.get_financials(symbol)
     recommendations = yf_client.get_recommendations(symbol)
     news = yf_client.get_news(symbol)
+    market_info = yf_client.get_market_info(symbol)
     
-    # Use ticker for metadata (currency)
-    ticker = yf_client.get_ticker(symbol)
-    currency = ticker.info.get("currency", "USD")
+    currency = market_info.get("currency", "USD")
 
     # 2. Extract price data
     closes = [row["Close"] for row in history if "Close" in row]
@@ -97,12 +111,14 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     return {
         "symbol": symbol.upper(),
         "currency": currency,
+        "market_status": market_info.get("market_state", "CLOSED"),
+        "last_trade_date": _format_timestamp(market_info.get("last_trade_time")),
         "summary": {
             "latest_close": round(latest_close, 2),
             "price_change_percent": round(price_change_pct, 2),
             "trend": "up" if price_change > 0 else "down",
             "news_sentiment": "positive" if sentiment_score > 0 else "neutral",
-            **sek_data # Add SEK price if applicable
+            **sek_data
         },
         "key_financials": key_metrics,
         "analyst_summary": {
@@ -128,6 +144,9 @@ def get_market_overview() -> dict[str, Any]:
     }
 
     overview = []
+    # Check OMX to get the general market state for the overview
+    omx_info = yf_client.get_market_info("^OMX")
+    
     for symbol, name in indices.items():
         try:
             # Get 5 days of history to calculate 1-day change
@@ -146,4 +165,8 @@ def get_market_overview() -> dict[str, Any]:
         except Exception as e:
             logging.error(f"Failed to fetch index {symbol}: {e}")
 
-    return {"market_indices": overview}
+    return {
+        "market_status": omx_info.get("market_state", "CLOSED"),
+        "last_trading_day": _format_timestamp(omx_info.get("last_trade_time")),
+        "market_indices": overview
+    }

@@ -77,6 +77,21 @@ def get_current_price(symbol: str) -> float:
         return float(df["Close"].iloc[-1])
 
 
+def get_market_info(symbol: str) -> dict[str, Any]:
+    """Fetch market state and last trading time for a symbol."""
+    ticker = get_ticker(symbol)
+    try:
+        # ticker.info is more reliable than fast_info for metadata on some systems
+        info = ticker.info
+        return {
+            "market_state": info.get("marketState", "CLOSED"),
+            "last_trade_time": info.get("regularMarketTime"),
+            "currency": info.get("currency", "USD")
+        }
+    except Exception:
+        return {"market_state": "CLOSED", "last_trade_time": None, "currency": "USD"}
+
+
 def get_history(symbol: str, period: str = "3mo") -> list[dict[str, Any]]:
     """
     Fetch historical price data with SQLite caching.

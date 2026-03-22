@@ -68,14 +68,9 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     Perform a deep dive analysis on a SPECIFIC individual company (e.g., 'AAPL', 'VOLV-B.ST').
     
     Returns price trends, volatility, key financials (Revenue, Net Income, Margins), 
-    and analyst recommendations.
+    analyst recommendations, and current MARKET STATUS (OPEN/CLOSED).
     
-    DO NOT use this tool for market-wide indices like S&P 500 (^GSPC) or OMX Stockholm (^OMX).
-    Instead, use get_market_overview_tool for those.
-    
-    Args:
-        symbol: The stock ticker (e.g., 'AAPL', 'VOLV-B.ST').
-        period: Time range (e.g., '1mo', '3mo', '1y').
+    Note: If market_status is 'CLOSED', the data refers to the 'Last Close'.
     """
     logging.info(f"Tool call: analyze_stock_tool(symbol={symbol})")
     try:
@@ -88,12 +83,10 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
 @mcp.tool()
 def get_market_overview_tool() -> dict[str, Any]:
     """
-    Show the general market situation for Stockholm, USA, and Germany.
+    Show the general market situation (Stockholm, USA, Germany) and USD/SEK rate.
     
-    Provides status for major indices: OMX Stockholm 30 (^OMX), OMX Stockholm PI (^OMXSPI),
-    S&P 500 (^GSPC), and Nasdaq (^IXIC), plus the USD/SEK exchange rate.
-    
-    Use this first if the user asks for "market overview", "stockholm status", or similar.
+    Provides status for major indices and explicitly states if markets are OPEN or CLOSED.
+    Always check 'market_status' before describing the market as "up" or "down" today.
     """
     logging.info("Tool call: get_market_overview_tool")
     try:
