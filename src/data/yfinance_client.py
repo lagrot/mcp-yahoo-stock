@@ -64,6 +64,19 @@ def get_ticker(symbol: str) -> yf.Ticker:
     return yf.Ticker(symbol)
 
 
+def get_current_price(symbol: str) -> float:
+    """Fetch the latest price for a symbol (e.g., 'USDSEK=X')."""
+    ticker = get_ticker(symbol)
+    # Use fast_info if available, otherwise history
+    try:
+        return ticker.fast_info["lastPrice"]
+    except Exception:
+        df = ticker.history(period="1d")
+        if df.empty:
+            raise ValueError(f"Could not fetch price for {symbol}")
+        return float(df["Close"].iloc[-1])
+
+
 def get_history(symbol: str, period: str = "3mo") -> list[dict[str, Any]]:
     """
     Fetch historical price data with SQLite caching.
@@ -111,8 +124,12 @@ def get_financials(symbol: str) -> dict[str, Any]:
     """Fetch income statement and balance sheet data."""
     ticker = get_ticker(symbol)
 
-    income_stmt = ticker.financials
-    balance_sheet = ticker.balance_sheet
+    try:
+        income_stmt = ticker.financials
+        balance_sheet = ticker.balance_sheet
+    except Exception:
+        # Indices and some small caps don't have fundamentals
+        return {"income_statement": {}, "balance_sheet": {}}
 
     return {
         "income_statement": (
@@ -143,3 +160,32 @@ def get_news(symbol: str) -> list[dict[str, Any]]:
     news = ticker.news or []
 
     return [{k: _serialize_value(v) for k, v in item.items()} for item in news]
+
+
+def search_symbol(query: str) -> list[dict[str, Any]]:
+    """Search for a stock ticker by company name or query."""
+    # Use yfinance's internal search helper
+    import requests
+
+    try:
+        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=5"
+        res = requests.get(
+            url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10
+        )
+        res.raise_for_status()
+        data = res.json()
+        
+        # Format the relevant results
+        results = []
+        for quote in data.get("quotes", []):
+            results.append({
+                "symbol": quote.get("symbol"),
+                "name": quote.get("shortname") or quote.get("longname"),
+                "exchange": quote.get("exchange"),
+                "type": quote.get("quoteType")
+            })
+        return results
+    except Exception as e:
+        import logging
+        logging.error(f"Search failed for {query}: {e}")
+        return []

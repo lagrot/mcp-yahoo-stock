@@ -48,12 +48,18 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     Perform a comprehensive analysis of a stock symbol.
     """
     logging.info(f"Analyzing stock: {symbol}")
+    
+    # 1. Fetch raw data
     history = yf_client.get_history(symbol, period)
     financials = yf_client.get_financials(symbol)
     recommendations = yf_client.get_recommendations(symbol)
     news = yf_client.get_news(symbol)
+    
+    # Use ticker for metadata (currency)
+    ticker = yf_client.get_ticker(symbol)
+    currency = ticker.info.get("currency", "USD")
 
-    # Extract price data
+    # 2. Extract price data
     closes = [row["Close"] for row in history if "Close" in row]
     if not closes:
         raise ValueError(f"No price data available for {symbol}")
@@ -65,10 +71,22 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     price_change = latest_close - first_close
     price_change_pct = (price_change / first_close) * 100
     
-    # Financial extraction
+    # 3. Currency Conversion (USD to SEK)
+    sek_data = {}
+    if currency == "USD":
+        try:
+            usdsek_rate = yf_client.get_current_price("USDSEK=X")
+            sek_data = {
+                "latest_close_sek": round(latest_close * usdsek_rate, 2),
+                "usdsek_rate": round(usdsek_rate, 4)
+            }
+        except Exception as e:
+            logging.error(f"Failed to fetch USDSEK rate: {e}")
+
+    # 4. Financial extraction
     key_metrics = _extract_financial_metrics(financials)
 
-    # Simple sentiment
+    # 5. Simple sentiment
     positive_keywords = {"gain", "growth", "beat", "strong", "upgrade", "success"}
     sentiment_score = 0
     for article in news:
@@ -78,11 +96,13 @@ def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
 
     return {
         "symbol": symbol.upper(),
+        "currency": currency,
         "summary": {
             "latest_close": round(latest_close, 2),
             "price_change_percent": round(price_change_pct, 2),
             "trend": "up" if price_change > 0 else "down",
             "news_sentiment": "positive" if sentiment_score > 0 else "neutral",
+            **sek_data # Add SEK price if applicable
         },
         "key_financials": key_metrics,
         "analyst_summary": {
@@ -104,6 +124,7 @@ def get_market_overview() -> dict[str, Any]:
         "^GSPC": "S&P 500",
         "^IXIC": "Nasdaq Composite",
         "^GDAXI": "DAX (Germany)",
+        "USDSEK=X": "USD/SEK Exchange Rate",
     }
 
     overview = []

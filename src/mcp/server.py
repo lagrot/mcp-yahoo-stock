@@ -11,6 +11,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from src.data import yfinance_client
 from src.services import stock_service
 
 # -----------------------------------------------------------------------------
@@ -34,7 +35,6 @@ def setup_logging(debug: bool = False):
     )
 
     # Note: We keep the file open for the duration of the process to capture stderr.
-    # In this specific context, assigning to sys.stderr is a standard practice for redirection.
     # ruff: noqa: SIM115
     sys.stderr = open(LOG_FILE, "a", buffering=1)
     logging.info("MCP Server starting...")
@@ -47,15 +47,34 @@ mcp = FastMCP("Stock-Analysis")
 
 
 @mcp.tool()
+def search_symbol_tool(query: str) -> dict[str, Any]:
+    """
+    Search for a stock ticker by company name (e.g., 'Investor', 'Spotify', 'H&M').
+    
+    Use this if you are not sure about the exact ticker symbol or exchange.
+    """
+    logging.info(f"Tool call: search_symbol_tool(query={query})")
+    try:
+        results = yfinance_client.search_symbol(query)
+        return {"query": query, "results": results}
+    except Exception as e:
+        logging.error(f"Error in search_symbol_tool: {str(e)}", exc_info=True)
+        return {"error": str(e)}
+
+
+@mcp.tool()
 def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
-    Perform a comprehensive analysis of a stock ticker symbol.
-
-    Returns recent price trends, volatility, key financials (Revenue, Net Income,
-    Margins), analyst recommendations, and news sentiment.
-
+    Perform a deep dive analysis on a SPECIFIC individual company (e.g., 'AAPL', 'VOLV-B.ST').
+    
+    Returns price trends, volatility, key financials (Revenue, Net Income, Margins), 
+    and analyst recommendations.
+    
+    DO NOT use this tool for market-wide indices like S&P 500 (^GSPC) or OMX Stockholm (^OMX).
+    Instead, use get_market_overview_tool for those.
+    
     Args:
-        symbol: The ticker (e.g., 'AAPL', 'NVDA', 'VOLV-B.ST' for Volvo in Sweden).
+        symbol: The stock ticker (e.g., 'AAPL', 'VOLV-B.ST').
         period: Time range (e.g., '1mo', '3mo', '1y').
     """
     logging.info(f"Tool call: analyze_stock_tool(symbol={symbol})")
@@ -69,9 +88,12 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
 @mcp.tool()
 def get_market_overview_tool() -> dict[str, Any]:
     """
-    Get a summary of major global indices, including the OMX Stockholm 30 (Sweden).
-
-    Use this to get a pulse on the general market sentiment and performance.
+    Show the general market situation for Stockholm, USA, and Germany.
+    
+    Provides status for major indices: OMX Stockholm 30 (^OMX), OMX Stockholm PI (^OMXSPI),
+    S&P 500 (^GSPC), and Nasdaq (^IXIC), plus the USD/SEK exchange rate.
+    
+    Use this first if the user asks for "market overview", "stockholm status", or similar.
     """
     logging.info("Tool call: get_market_overview_tool")
     try:
