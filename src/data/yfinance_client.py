@@ -8,7 +8,7 @@ financials, and market info, with automatic caching for historical prices.
 
 import datetime
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import requests
 import yfinance as yf
@@ -46,10 +46,10 @@ def get_current_price(symbol: str) -> float:
     ticker = get_ticker(symbol)
     try:
         return ticker.fast_info["lastPrice"]
-    except Exception:
+    except Exception as e:
         df = ticker.history(period="1d")
         if df.empty:
-            raise ValueError(f"Could not fetch price for {symbol}")
+            raise ValueError(f"Could not fetch price for {symbol}") from e
         return float(df["Close"].iloc[-1])
 
 
@@ -114,7 +114,7 @@ def _is_cache_fresh(last_date_str: str) -> bool:
         return False
 
 
-def _get_history_from_cache(symbol: str) -> Optional[list[dict[str, Any]]]:
+def _get_history_from_cache(symbol: str) -> list[dict[str, Any]] | None:
     """Attempt to retrieve valid historical data from the local cache."""
     cached = get_cached_history(symbol)
     if not cached:
