@@ -49,7 +49,7 @@ mcp = FastMCP("Stock-Analysis")
 @mcp.tool()
 def search_symbol_tool(query: str) -> dict[str, Any]:
     """
-    Search for a stock ticker by company name (e.g., 'Investor', 'Spotify', 'H&M').
+    Search for a stock ticker by company name or query.
     
     Use this if you are not sure about the exact ticker symbol or exchange.
     """
@@ -65,7 +65,7 @@ def search_symbol_tool(query: str) -> dict[str, Any]:
 @mcp.tool()
 def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
-    Perform a deep dive analysis on a SPECIFIC individual company (e.g., 'AAPL', 'VOLV-B.ST').
+    Perform a deep dive analysis on a SPECIFIC individual company ticker.
     
     Returns price trends, volatility, key financials (Revenue, Net Income, Margins), 
     analyst recommendations, and current MARKET STATUS (OPEN/CLOSED).
