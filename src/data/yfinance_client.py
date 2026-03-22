@@ -14,6 +14,7 @@ import requests
 import yfinance as yf
 
 from src.data.cache import get_cached_history, init_db, save_history
+from src.utils.exceptions import APIError, DataNotFoundError, RateLimitError
 from src.utils.serialization import serialize_dict, serialize_records, serialize_value
 
 # Constants
@@ -49,7 +50,7 @@ def get_current_price(symbol: str) -> float:
     except Exception as e:
         df = ticker.history(period="1d")
         if df.empty:
-            raise ValueError(f"Could not fetch price for {symbol}") from e
+            raise DataNotFoundError(f"Could not fetch price for {symbol}") from e
         return float(df["Close"].iloc[-1])
 
 
@@ -130,10 +131,13 @@ def _get_history_from_cache(symbol: str) -> list[dict[str, Any]] | None:
 def _fetch_history_from_api(symbol: str, period: str) -> list[dict[str, Any]]:
     """Fetch fresh historical data from Yahoo Finance."""
     ticker = get_ticker(symbol)
-    df = ticker.history(period=period)
+    try:
+        df = ticker.history(period=period)
+    except Exception as e:
+        raise APIError(f"Failed to fetch data from Yahoo Finance: {e}")
 
     if df.empty:
-        raise ValueError(f"No historical data available for symbol: {symbol}")
+        raise DataNotFoundError(f"No historical data available for symbol: {symbol}")
 
     # Reset index to include 'Date' as a column, then serialize
     records = df.reset_index().to_dict(orient="records")
@@ -229,6 +233,8 @@ def search_symbol(query: str) -> list[dict[str, Any]]:
         res = requests.get(
             url, headers={"User-Agent": DEFAULT_USER_AGENT}, timeout=10
         )
+        if res.status_code == 429:
+            raise RateLimitError("Rate limit exceeded for search API")
         res.raise_for_status()
         data = res.json()
 
@@ -243,6 +249,7 @@ def search_symbol(query: str) -> list[dict[str, Any]]:
                 }
             )
         return results
+    except RateLimitError:
+        raise
     except Exception as e:
-        logging.error(f"Search failed for {query}: {e}")
-        return []
+        raise APIError(f"Search failed for {query}: {e}")

@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 
 from src.data import yfinance_client
 from src.services import stock_service
+from src.utils.exceptions import APIError, DataNotFoundError, RateLimitError
 from src.utils.logging_setup import setup_logging
 
 # -----------------------------------------------------------------------------
@@ -30,9 +31,13 @@ def search_symbol_tool(query: str) -> dict[str, Any]:
     try:
         results = yfinance_client.search_symbol(query)
         return {"query": query, "results": results}
+    except RateLimitError:
+        return {"error": "Rate limit exceeded. Please try again later.", "code": 429}
+    except APIError as e:
+        return {"error": str(e), "code": 500}
     except Exception as e:
         logging.error(f"Error in search_symbol_tool: {str(e)}", exc_info=True)
-        return {"error": str(e)}
+        return {"error": "An unexpected error occurred", "details": str(e)}
 
 
 @mcp.tool()
@@ -49,9 +54,16 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     logging.info(f"Tool call: analyze_stock_tool(symbol={symbol})")
     try:
         return stock_service.analyze_stock(symbol, period)
+    except DataNotFoundError:
+        return {"error": f"No data found for symbol: {symbol}", "code": 404, "symbol": symbol}
+    except RateLimitError:
+        return {"error": "Rate limit exceeded. Please try again later.", "code": 429}
+    except APIError as e:
+        return {"error": str(e), "code": 500, "symbol": symbol}
     except Exception as e:
         logging.error(f"Error in analyze_stock_tool: {str(e)}", exc_info=True)
-        return {"error": str(e), "symbol": symbol}
+        return {"error": "An unexpected error occurred", "details": str(e), "symbol": symbol}
+
 
 
 @mcp.tool()
