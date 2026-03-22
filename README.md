@@ -22,7 +22,7 @@ A local Model Context Protocol (MCP) server for stock analysis using Yahoo Finan
 src/
   data/        # Data fetching + caching
   services/    # Analysis logic
-  mcp/         # MCP server (Standard JSON-RPC)
+  mcp/         # MCP server (Standard JSON-RPC 2.0)
 ```
 
 ---
@@ -33,6 +33,19 @@ src/
 # Install dependencies
 uv sync
 ```
+
+---
+
+## 🧪 Standalone Testing (WSL / Linux)
+
+Since this is an MCP server, it communicates via `stdin` and `stdout` using JSON-RPC 2.0. To verify the server is working correctly without an LLM client, use the included test script:
+
+```bash
+# Run the automated test client
+uv run python test_mcp_client.py
+```
+
+This script performs the standard MCP handshake, lists tools, and calls the `analyze_stock_tool` for AAPL.
 
 ---
 
@@ -74,11 +87,25 @@ Add this to your `claude_desktop_config.json`:
 
 ---
 
-## 💾 Caching
+## 💾 Caching & Database
 
-* Uses SQLite (`cache.db`)
-* Caches historical prices only
-* Automatically refreshes if data is older than 1 day
+* **SQLite:** This project uses a local SQLite database (`cache.db`) for caching. You **do not** need to install SQLite on your system manually; it is included in the Python standard library.
+* **Logic:** Caches historical prices only and refreshes data older than 1 day.
+
+---
+
+## 🛠️ Development
+
+This project uses **Ruff** for linting and formatting.
+
+```bash
+# Check for issues
+uv run ruff check .
+
+# Fix and format
+uv run ruff check --fix .
+uv run ruff format .
+```
 
 ---
 
