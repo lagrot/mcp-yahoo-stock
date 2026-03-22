@@ -127,11 +127,34 @@ uv run ruff format .
 
 ---
 
-## ⚠️ Limitations
+## 🩺 Troubleshooting & Logging
 
-* Uses unofficial Yahoo Finance API (`yfinance`)
-* Data may be delayed or incomplete
-* Not suitable for high-frequency trading
+This server logs all activity to `mcp_server.log` in the project root. This is the best place to check if the server is failing to connect to your LLM.
+
+### Checking logs in real-time (WSL/Linux):
+```bash
+tail -f mcp_server.log
+```
+
+### Enable Debug Mode
+To enable more verbose logging, update your MCP configuration to include the `--debug` flag:
+
+**Gemini CLI:**
+```bash
+gemini mcp add stock-analysis "uv run python -m src.mcp.server --debug" --trust -s project
+```
+
+**Claude Desktop:**
+```json
+{
+  "mcpServers": {
+    "stock-analysis": {
+      "command": "uv",
+      "args": ["run", "--project", "/path/to/stock-mcp", "python", "-m", "src.mcp.server", "--debug"]
+    }
+  }
+}
+```
 
 ---
 
