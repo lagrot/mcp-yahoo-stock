@@ -99,6 +99,8 @@ def get_market_overview() -> dict[str, Any]:
     """
     indices = {
         "^OMX": "OMX Stockholm 30",
+        "^OMXSPI": "OMX Stockholm PI",
+        "^OMXSGI": "OMX Stockholm GI",
         "^GSPC": "S&P 500",
         "^IXIC": "Nasdaq Composite",
         "^GDAXI": "DAX (Germany)",

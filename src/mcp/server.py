@@ -3,6 +3,7 @@ MCP Server implementation using FastMCP with robust logging and debug support.
 """
 
 import argparse
+import contextlib
 import logging
 import os
 import sys
@@ -17,38 +18,42 @@ from src.services import stock_service
 # -----------------------------------------------------------------------------
 LOG_FILE = "mcp_server.log"
 
+
 def setup_logging(debug: bool = False):
     """Set up file-based logging."""
     level = logging.DEBUG if debug else logging.INFO
-    
+
     if os.path.exists(LOG_FILE):
-        try:
+        with contextlib.suppress(OSError):
             os.remove(LOG_FILE)
-        except OSError:
-            pass
 
     logging.basicConfig(
         filename=LOG_FILE,
         level=level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    
+
+    # Note: We keep the file open for the duration of the process to capture stderr.
+    # In this specific context, assigning to sys.stderr is a standard practice for redirection.
+    # ruff: noqa: SIM115
     sys.stderr = open(LOG_FILE, "a", buffering=1)
     logging.info("MCP Server starting...")
+
 
 # -----------------------------------------------------------------------------
 # Server Setup
 # -----------------------------------------------------------------------------
 mcp = FastMCP("Stock-Analysis")
 
+
 @mcp.tool()
 def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
     Perform a comprehensive analysis of a stock ticker symbol.
-    
-    Returns recent price trends, volatility, key financials (Revenue, Net Income, 
+
+    Returns recent price trends, volatility, key financials (Revenue, Net Income,
     Margins), analyst recommendations, and news sentiment.
-    
+
     Args:
         symbol: The ticker (e.g., 'AAPL', 'NVDA', 'VOLV-B.ST' for Volvo in Sweden).
         period: Time range (e.g., '1mo', '3mo', '1y').
@@ -65,7 +70,7 @@ def analyze_stock_tool(symbol: str, period: str = "3mo") -> dict[str, Any]:
 def get_market_overview_tool() -> dict[str, Any]:
     """
     Get a summary of major global indices, including the OMX Stockholm 30 (Sweden).
-    
+
     Use this to get a pulse on the general market sentiment and performance.
     """
     logging.info("Tool call: get_market_overview_tool")
@@ -74,6 +79,7 @@ def get_market_overview_tool() -> dict[str, Any]:
     except Exception as e:
         logging.error(f"Error in get_market_overview_tool: {str(e)}", exc_info=True)
         return {"error": str(e)}
+
 
 # -----------------------------------------------------------------------------
 # Main Entry Point
@@ -91,6 +97,7 @@ def main():
     except Exception as e:
         logging.critical(f"Server crashed: {str(e)}", exc_info=True)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
