@@ -14,8 +14,8 @@ from src.data import yfinance_client
 from src.services import stock_service
 from src.utils.exceptions import APIError, DataNotFoundError, RateLimitError
 from src.utils.logging_setup import setup_logging
-from src.utils.validation import validate_query, validate_symbol
 from src.utils.tracing import tracer
+from src.utils.validation import validate_query, validate_symbol
 
 # -----------------------------------------------------------------------------
 # Server Setup
@@ -96,6 +96,22 @@ async def yahoo_finance_lookup_and_analyze(query: str, period: str = "3mo") -> d
             return {"error": "An unexpected error occurred during lookup", "details": str(e)}
 
 
+@mcp.tool()
+async def yahoo_finance_market_overview() -> dict[str, Any]:
+    """
+    [PRIMARY SOURCE] OFFICIAL Global Market Status and Exchange Rates.
+
+    USE THIS to check if markets (OMX Stockholm, US, Germany) are OPEN or CLOSED.
+    Provides real-time index prices (S&P 500, Nasdaq, DAX) and the USD/SEK rate.
+    """
+    logger.info("Tool call: yahoo_finance_market_overview")
+    try:
+        return await stock_service.get_market_overview()
+    except Exception as e:
+        logger.error(f"Error in yahoo_finance_market_overview: {str(e)}", exc_info=True)
+        return {"error": "An unexpected error occurred", "details": str(e)}
+
+
 # -----------------------------------------------------------------------------
 # Main Entry Point
 # -----------------------------------------------------------------------------
@@ -104,21 +120,15 @@ def main():
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
 
-    setup_logging(debug=args.debug)
+    # Enable debug if --debug flag is passed OR MCP_DEBUG environment variable is set
+    debug_mode = args.debug or os.environ.get("MCP_DEBUG", "").lower() == "true"
+    setup_logging(debug=debug_mode)
 
     try:
-        import logging
-        logging.info("Running MCP server on stdio...")
+        logger.info("Running MCP server on stdio...")
         mcp.run()
     except Exception as e:
-        import logging
-        logging.critical(f"Server crashed: {str(e)}", exc_info=True)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-ical(f"Server crashed: {str(e)}", exc_info=True)
+        logger.critical(f"Server crashed: {str(e)}", exc_info=True)
         sys.exit(1)
 
 
