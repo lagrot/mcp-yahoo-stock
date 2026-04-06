@@ -2,6 +2,11 @@ import asyncio
 import json
 import pytest
 
+def test_server_import_smoke():
+    """Verify the server can be imported without Syntax/Name errors."""
+    from src.mcp import server
+    assert server is not None
+
 @pytest.mark.asyncio
 async def test_yahoo_finance_analyze_stock():
     limit = 1024 * 1024
