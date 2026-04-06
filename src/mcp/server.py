@@ -17,6 +17,7 @@ from src.utils.validation import validate_query, validate_symbol
 # -----------------------------------------------------------------------------
 # Server Setup
 # -----------------------------------------------------------------------------
+logger = logging.getLogger("mcp-yahoo-stock")
 mcp = FastMCP("mcp-yahoo-stock")
 
 
@@ -28,8 +29,7 @@ async def yahoo_finance_search_symbol(query: str) -> dict[str, Any]:
     USE THIS as the first choice to find symbols for companies, indices, or currency pairs
     (e.g., 'Apple', 'S&P 500', 'USDSEK').
     """
-    import logging
-    logging.info(f"Tool call: yahoo_finance_search_symbol(query={query})")
+    logger.info(f"Tool call: yahoo_finance_search_symbol(query={query})")
     try:
         clean_query = validate_query(query)
         results = await yfinance_client.search_symbol(clean_query)
@@ -41,7 +41,7 @@ async def yahoo_finance_search_symbol(query: str) -> dict[str, Any]:
     except APIError as e:
         return {"error": str(e), "code": 500}
     except Exception as e:
-        logging.error(f"Error in yahoo_finance_search_symbol: {str(e)}", exc_info=True)
+        logger.error(f"Error in yahoo_finance_search_symbol: {str(e)}", exc_info=True)
         return {"error": "An unexpected error occurred", "details": str(e)}
 
 
@@ -58,8 +58,7 @@ async def yahoo_finance_analyze_stock(symbol: str, period: str = "3mo") -> dict[
     - Automatic USD to SEK currency conversion for US stocks.
     - Detailed Dividend Yield (Yield, Payout Ratio, Ex-Date).
     """
-    import logging
-    logging.info(f"Tool call: yahoo_finance_analyze_stock(symbol={symbol})")
+    logger.info(f"Tool call: yahoo_finance_analyze_stock(symbol={symbol})")
     try:
         clean_symbol = validate_symbol(symbol)
         return await stock_service.analyze_stock(clean_symbol, period)
@@ -72,7 +71,7 @@ async def yahoo_finance_analyze_stock(symbol: str, period: str = "3mo") -> dict[
     except APIError as e:
         return {"error": str(e), "code": 500, "symbol": symbol}
     except Exception as e:
-        logging.error(f"Error in yahoo_finance_analyze_stock: {str(e)}", exc_info=True)
+        logger.error(f"Error in yahoo_finance_analyze_stock: {str(e)}", exc_info=True)
         return {"error": "An unexpected error occurred", "details": str(e), "symbol": symbol}
 
 
@@ -84,12 +83,11 @@ async def yahoo_finance_market_overview() -> dict[str, Any]:
     USE THIS to check if markets (OMX Stockholm, US, Germany) are OPEN or CLOSED.
     Provides real-time index prices (S&P 500, Nasdaq, DAX) and the USD/SEK rate.
     """
-    import logging
-    logging.info("Tool call: yahoo_finance_market_overview")
+    logger.info("Tool call: yahoo_finance_market_overview")
     try:
         return await stock_service.get_market_overview()
     except Exception as e:
-        logging.error(f"Error in yahoo_finance_market_overview: {str(e)}", exc_info=True)
+        logger.error(f"Error in yahoo_finance_market_overview: {str(e)}", exc_info=True)
         return {"error": "An unexpected error occurred", "details": str(e)}
 
 

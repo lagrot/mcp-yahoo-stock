@@ -191,7 +191,7 @@ async def get_market_overview() -> dict[str, Any]:
                     "change_percent": round(change_pct, 2),
                 }
         except Exception as e:
-            logging.error(f"Failed to fetch index {symbol}: {e}")
+            logger.error(f"Failed to fetch index {symbol}: {e}")
         return None
 
     for symbol, name in indices.items():
@@ -203,5 +203,8 @@ async def get_market_overview() -> dict[str, Any]:
     return {
         "market_status": omx_info.get("market_state", "CLOSED"),
         "last_trading_day": format_timestamp(omx_info.get("last_trade_time")),
+        "market_indices": overview,
+    }
+e")),
         "market_indices": overview,
     }
