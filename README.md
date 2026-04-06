@@ -167,7 +167,7 @@ To enable more verbose logging, update your MCP configuration to include the `--
 
 **Gemini CLI:**
 ```bash
-gemini mcp add mcp-yahoo-stock "uv -- --project <PATH_TO_PROJECT> run env PYTHONPATH=<PATH_TO_PROJECT> python -m src.mcp.server --debug" --trust -s project
+gemini mcp add mcp-yahoo-stock "uv -- --project <PATH_TO_PROJECT> run env PYTHONPATH=<PATH_TO_PROJECT> python -m src.mcp.server" --trust -s project
 ```
 
 **Claude Desktop:**
@@ -176,7 +176,7 @@ gemini mcp add mcp-yahoo-stock "uv -- --project <PATH_TO_PROJECT> run env PYTHON
   "mcpServers": {
     "mcp-yahoo-stock": {
       "command": "uv",
-      "args": ["run", "--project", "/path/to/mcp-yahoo-stock", "python", "-m", "src.mcp.server", "--debug"]
+      "args": ["run", "--project", "/path/to/mcp-yahoo-stock", "python", "-m", "src.mcp.server"]
     }
   }
 }
