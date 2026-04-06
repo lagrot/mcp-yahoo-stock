@@ -16,6 +16,7 @@ After every code change, execute the following steps in order:
 ### 1. Code Review
 Before staging, analyze all modified files for:
 - Syntax errors and obvious bugs
+- **Type errors** (run `uv run mypy .`)
 - Hardcoded secrets, API keys, or credentials (block commit if found)
 - **Absolute local paths containing usernames** (replace with `<PATH_TO_PROJECT>` or similar placeholders)
 - Unused imports or dead code
