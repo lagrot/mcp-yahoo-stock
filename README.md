@@ -68,6 +68,20 @@ gemini mcp add mcp-yahoo-stock uv -- --project <PATH_TO_PROJECT> run env PYTHONP
 *Note: Replace `<PROJECT_PATH>` with your full path (e.g., `/home/username/git/mcp-yahoo-stock`).*
 
 Once registered, you can use the analysis tools from any directory:
+
+### Example Usage
+
+**1. Check Market Status (No arguments):**
+```bash
+gemini tool call mcp-yahoo-stock:yahoo_finance_market_overview '{}'
+```
+
+**2. Analyze a Company by Name (Smart Lookup):**
+```bash
+gemini tool call mcp-yahoo-stock:yahoo_finance_lookup_and_analyze '{"query": "Apple"}'
+```
+
+**3. Deep Dive into a Specific Ticker:**
 ```bash
 gemini tool call mcp-yahoo-stock:yahoo_finance_analyze_stock '{"symbol": "AAPL", "period": "1mo"}'
 ```
