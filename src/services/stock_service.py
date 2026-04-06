@@ -9,6 +9,8 @@ from typing import Any
 from src.data import yfinance_client as yf_client
 from src.utils.formatting import format_timestamp
 
+logger = logging.getLogger("mcp-yahoo-stock")
+
 
 def _extract_financial_metrics(financials: dict[str, Any]) -> dict[str, Any]:
     """
@@ -49,7 +51,7 @@ async def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     """
     Perform a comprehensive analysis of a stock symbol.
     """
-    logging.info(f"Analyzing stock: {symbol}")
+    logger.info(f"Analyzing stock: {symbol}")
 
     # 1. Fetch raw data + Market status + Dividends
     # Run independent API calls concurrently
@@ -93,7 +95,7 @@ async def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
                 "usdsek_rate": round(usdsek_rate, 4),
             }
         except Exception as e:
-            logging.error(f"Failed to fetch USDSEK rate: {e}")
+            logger.error(f"Failed to fetch USDSEK rate: {e}")
 
     # 4. Financial extraction
     key_metrics = _extract_financial_metrics(financials)
@@ -203,8 +205,5 @@ async def get_market_overview() -> dict[str, Any]:
     return {
         "market_status": omx_info.get("market_state", "CLOSED"),
         "last_trading_day": format_timestamp(omx_info.get("last_trade_time")),
-        "market_indices": overview,
-    }
-e")),
         "market_indices": overview,
     }

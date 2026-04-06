@@ -3,6 +3,7 @@ MCP Server implementation using FastMCP with robust logging and debug support.
 """
 
 import argparse
+import logging
 import sys
 from typing import Any
 
