@@ -14,6 +14,7 @@ from src.services import stock_service
 from src.utils.exceptions import APIError, DataNotFoundError, RateLimitError
 from src.utils.logging_setup import setup_logging
 from src.utils.validation import validate_query, validate_symbol
+from src.utils.tracing import tracer
 
 # -----------------------------------------------------------------------------
 # Server Setup
@@ -30,20 +31,15 @@ async def yahoo_finance_search_symbol(query: str) -> dict[str, Any]:
     USE THIS as the first choice to find symbols for companies, indices, or currency pairs
     (e.g., 'Apple', 'S&P 500', 'USDSEK').
     """
-    logger.info(f"Tool call: yahoo_finance_search_symbol(query={query})")
-    try:
-        clean_query = validate_query(query)
-        results = await yfinance_client.search_symbol(clean_query)
-        return {"query": clean_query, "results": results}
-    except ValueError as e:
-        return {"error": str(e), "code": 400}
-    except RateLimitError:
-        return {"error": "Rate limit exceeded. Please try again later.", "code": 429}
-    except APIError as e:
-        return {"error": str(e), "code": 500}
-    except Exception as e:
-        logger.error(f"Error in yahoo_finance_search_symbol: {str(e)}", exc_info=True)
-        return {"error": "An unexpected error occurred", "details": str(e)}
+    with tracer.start_as_current_span("search_symbol"):
+        logger.info(f"Tool call: yahoo_finance_search_symbol(query={query})")
+        try:
+            clean_query = validate_query(query)
+            results = await yfinance_client.search_symbol(clean_query)
+            return {"query": clean_query, "results": results}
+        except Exception as e:
+            logger.error(f"Error in yahoo_finance_search_symbol: {str(e)}", exc_info=True)
+            return {"error": "An unexpected error occurred", "details": str(e)}
 
 
 @mcp.tool()
@@ -59,21 +55,15 @@ async def yahoo_finance_analyze_stock(symbol: str, period: str = "3mo") -> dict[
     - Automatic USD to SEK currency conversion for US stocks.
     - Detailed Dividend Yield (Yield, Payout Ratio, Ex-Date).
     """
-    logger.info(f"Tool call: yahoo_finance_analyze_stock(symbol={symbol})")
-    try:
-        clean_symbol = validate_symbol(symbol)
-        return await stock_service.analyze_stock(clean_symbol, period)
-    except ValueError as e:
-        return {"error": str(e), "code": 400, "symbol": symbol}
-    except DataNotFoundError:
-        return {"error": f"No data found for symbol: {symbol}", "code": 404, "symbol": symbol}
-    except RateLimitError:
-        return {"error": "Rate limit exceeded. Please try again later.", "code": 429}
-    except APIError as e:
-        return {"error": str(e), "code": 500, "symbol": symbol}
-    except Exception as e:
-        logger.error(f"Error in yahoo_finance_analyze_stock: {str(e)}", exc_info=True)
-        return {"error": "An unexpected error occurred", "details": str(e), "symbol": symbol}
+    with tracer.start_as_current_span("analyze_stock") as span:
+        span.set_attribute("symbol", symbol)
+        logger.info(f"Tool call: yahoo_finance_analyze_stock(symbol={symbol})")
+        try:
+            clean_symbol = validate_symbol(symbol)
+            return await stock_service.analyze_stock(clean_symbol, period)
+        except Exception as e:
+            logger.error(f"Error in yahoo_finance_analyze_stock: {str(e)}", exc_info=True)
+            return {"error": "An unexpected error occurred", "details": str(e), "symbol": symbol}
 
 
 @mcp.tool()
