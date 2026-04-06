@@ -3,7 +3,7 @@ import json
 import pytest
 
 @pytest.mark.asyncio
-async def test_analyze_stock_tool():
+async def test_yahoo_finance_analyze_stock():
     limit = 1024 * 1024
     process = await asyncio.create_subprocess_exec(
         "uv", "run", "python", "-m", "src.mcp.server",
