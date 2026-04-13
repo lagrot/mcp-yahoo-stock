@@ -1,10 +1,12 @@
 import asyncio
 import json
 
+from typing import Any
+
 import pytest
 
 
-def test_server_import_smoke():
+def test_server_import_smoke() -> None:
     """Verify the server can be imported without Syntax/Name errors."""
     from src.mcp import server
 
@@ -12,7 +14,7 @@ def test_server_import_smoke():
 
 
 @pytest.mark.asyncio
-async def test_yahoo_finance_analyze_stock():
+async def test_yahoo_finance_analyze_stock() -> None:
     limit = 1024 * 1024
     process = await asyncio.create_subprocess_exec(
         "uv",
@@ -26,11 +28,13 @@ async def test_yahoo_finance_analyze_stock():
         limit=limit,
     )
 
-    async def send(msg):
+    async def send(msg: dict[str, Any]) -> None:
+        assert process.stdin is not None
         process.stdin.write(json.dumps(msg).encode() + b"\n")
         await process.stdin.drain()
 
-    async def receive():
+    async def receive() -> Any:
+        assert process.stdout is not None
         line = await process.stdout.readline()
         if not line:
             return None

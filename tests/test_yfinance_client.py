@@ -4,17 +4,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 
+from typing import Any, Generator
+
 from src.data import yfinance_client
 
 
 @pytest.fixture
-def mock_ticker():
+def mock_ticker() -> Generator[MagicMock, None, None]:
     with patch("src.data.yfinance_client.yf.Ticker") as mock:
         yield mock
 
 
 @pytest.mark.asyncio
-async def test_get_current_price_fast_info(mock_ticker):
+async def test_get_current_price_fast_info(mock_ticker: MagicMock) -> None:
     # Mock fast_info success
     ticker_inst = mock_ticker.return_value
     ticker_inst.fast_info = {"lastPrice": 150.0}
@@ -24,7 +26,7 @@ async def test_get_current_price_fast_info(mock_ticker):
 
 
 @pytest.mark.asyncio
-async def test_get_current_price_fallback_to_history(mock_ticker):
+async def test_get_current_price_fallback_to_history(mock_ticker: MagicMock) -> None:
     # Mock fast_info failure and history success
     ticker_inst = mock_ticker.return_value
     ticker_inst.fast_info = {}  # Simulate missing key or error
@@ -39,7 +41,7 @@ async def test_get_current_price_fallback_to_history(mock_ticker):
 
 
 @pytest.mark.asyncio
-async def test_search_symbol_success():
+async def test_search_symbol_success() -> None:
     mock_response = {
         "quotes": [
             {"symbol": "AAPL", "shortname": "Apple Inc.", "exchange": "NMS", "quoteType": "EQUITY"}
@@ -58,7 +60,7 @@ async def test_search_symbol_success():
 
 
 @pytest.mark.asyncio
-async def test_is_cache_fresh():
+async def test_is_cache_fresh() -> None:
     # Fresh cache (within 1 day)
     fresh_date = (datetime.datetime.now() - datetime.timedelta(hours=12)).isoformat()
     assert yfinance_client._is_cache_fresh(fresh_date) is True
@@ -75,7 +77,7 @@ async def test_is_cache_fresh():
 
 
 @pytest.mark.asyncio
-async def test_get_history_cache_hit():
+async def test_get_history_cache_hit() -> None:
     symbol = "AAPL"
     mock_cached_data = [{"Date": "2024-01-01", "Close": 150.0}]
 
@@ -92,7 +94,7 @@ async def test_get_history_cache_hit():
 
 
 @pytest.mark.asyncio
-async def test_get_history_cache_miss_api_success():
+async def test_get_history_cache_miss_api_success() -> None:
     symbol = "AAPL"
     mock_api_data = [{"Date": "2024-01-01", "Close": 150.0}]
 

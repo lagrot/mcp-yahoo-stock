@@ -24,6 +24,10 @@ def get_latest_delayed_prices(ticker: str | None = None) -> list[dict[str, Any]]
                 ORDER BY rowid DESC
                 LIMIT 1
             ''', (ticker,))
+            row = cursor.fetchone()
+            if not row:
+                return [{"error": f"Ticker '{ticker}' not found in local database."}]
+            return [{"ticker": row[0], "price": row[1], "change_pct": row[2], "timestamp": row[3]}]
         else:
             # Get latest price for each distinct ticker
             cursor.execute('''
@@ -35,10 +39,10 @@ def get_latest_delayed_prices(ticker: str | None = None) -> list[dict[str, Any]]
                     GROUP BY ticker
                 )
             ''')
-        rows = cursor.fetchall()
-        return [
-            {"ticker": row[0], "price": row[1], "change_pct": row[2], "timestamp": row[3]}
-            for row in rows
-        ]
+            rows = cursor.fetchall()
+            return [
+                {"ticker": row[0], "price": row[1], "change_pct": row[2], "timestamp": row[3]}
+                for row in rows
+            ]
     finally:
         conn.close()

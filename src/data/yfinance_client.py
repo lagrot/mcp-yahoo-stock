@@ -46,7 +46,8 @@ async def get_current_price(symbol: str) -> float:
     """
     ticker = get_ticker(symbol)
     try:
-        return ticker.fast_info["lastPrice"]
+        val = ticker.fast_info["lastPrice"]
+        return float(val)
     except Exception as e:
         df = await asyncio.to_thread(ticker.history, period="1d")
         if df.empty:
@@ -212,14 +213,14 @@ async def get_news(symbol: str) -> list[dict[str, Any]]:
 # -----------------------------------------------------------------------------
 
 
-async def search_symbol(query: str) -> list[dict[str, Any]]:
+async def search_symbol(query: str, limit: int = 5) -> list[dict[str, Any]]:
     """
     Search for a stock ticker by company name or query.
 
     Uses Yahoo Finance's query API directly.
     """
     try:
-        params = {"q": query, "quotesCount": 5}
+        params: dict[str, str | int] = {"q": query, "quotesCount": limit}
         async with httpx.AsyncClient() as client:
             res = await client.get(
                 SEARCH_URL, params=params, headers={"User-Agent": DEFAULT_USER_AGENT}, timeout=10

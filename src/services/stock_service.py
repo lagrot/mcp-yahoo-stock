@@ -178,13 +178,13 @@ async def get_market_overview() -> dict[str, Any]:
     # Create tasks for all concurrent index fetches
     tasks = []
 
-    async def fetch_index(symbol, name):
+    async def fetch_index(symbol: str, name: str) -> dict[str, Any] | None:
         try:
             # Get 5 days of history to calculate 1-day change
             history = await yf_client.get_history(symbol, period="5d")
             if len(history) >= 2:
-                latest = history[-1]["Close"]
-                prev = history[-2]["Close"]
+                latest = float(history[-1]["Close"])
+                prev = float(history[-2]["Close"])
                 change_pct = ((latest - prev) / prev) * 100
 
                 return {

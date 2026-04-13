@@ -4,9 +4,10 @@ Test client to debug missing dividends for New Wave Group.
 
 import asyncio
 import json
+from typing import Any
 
 
-async def run_test():
+async def run_test() -> None:
     limit = 1024 * 1024
     process = await asyncio.create_subprocess_exec(
         "uv",
@@ -20,11 +21,13 @@ async def run_test():
         limit=limit,
     )
 
-    async def send(msg):
+    async def send(msg: dict[str, Any]) -> None:
+        assert process.stdin is not None
         process.stdin.write(json.dumps(msg).encode() + b"\n")
         await process.stdin.drain()
 
-    async def receive():
+    async def receive() -> Any:
+        assert process.stdout is not None
         line = await process.stdout.readline()
         if not line:
             return None

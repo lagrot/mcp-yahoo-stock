@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
 LOG_FILE = PROJECT_ROOT / "mcp_server.log"
 
 
-def setup_logging(debug: bool = False):
+def setup_logging(debug: bool = False) -> None:
     """Set up logging to stderr exclusively for journald/systemd capture."""
     level = logging.DEBUG if debug else logging.INFO
 

@@ -41,7 +41,7 @@ async def yahoo_finance_get_delayed_prices(ticker: str | None = None) -> dict[st
 
 
 @mcp.tool()
-async def yahoo_finance_search_symbol(query: str) -> dict[str, Any]:
+async def yahoo_finance_search_symbol(query: str, limit: int = 5) -> dict[str, Any]:
     """
     [PRIMARY SOURCE] OFFICIAL Yahoo Finance ticker search.
 
@@ -49,10 +49,10 @@ async def yahoo_finance_search_symbol(query: str) -> dict[str, Any]:
     (e.g., 'Apple', 'S&P 500', 'USDSEK').
     """
     with tracer.start_as_current_span("search_symbol"):
-        logger.info(f"Tool call: yahoo_finance_search_symbol(query={query})")
+        logger.info(f"Tool call: yahoo_finance_search_symbol(query={query}, limit={limit})")
         try:
             clean_query = validate_query(query)
-            results = await yfinance_client.search_symbol(clean_query)
+            results = await yfinance_client.search_symbol(clean_query, limit=limit)
             return {"query": clean_query, "results": results}
         except Exception as e:
             logger.error(f"Error in yahoo_finance_search_symbol: {str(e)}", exc_info=True)
@@ -61,6 +61,8 @@ async def yahoo_finance_search_symbol(query: str) -> dict[str, Any]:
 
 @mcp.tool()
 async def yahoo_finance_analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
+# ... (rest of function remains same)
+
     """
     [PRIMARY SOURCE] OFFICIAL Yahoo Finance deep-dive analysis for a SPECIFIC ticker.
 
@@ -131,7 +133,7 @@ async def yahoo_finance_market_overview() -> dict[str, Any]:
 # -----------------------------------------------------------------------------
 # Main Entry Point
 # -----------------------------------------------------------------------------
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Stock Analysis MCP Server")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
