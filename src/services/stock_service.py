@@ -128,12 +128,15 @@ async def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
     }
 
     # 6. Simple sentiment
-    positive_keywords = {"gain", "growth", "beat", "strong", "upgrade", "success"}
+    positive_keywords = {"gain", "growth", "beat", "strong", "upgrade", "success", "buy", "outperform"}
+    negative_keywords = {"loss", "decline", "miss", "weak", "downgrade", "failure", "sell", "underperform"}
     sentiment_score = 0
     for article in news:
         title = article.get("title", "").lower()
         if any(k in title for k in positive_keywords):
             sentiment_score += 1
+        if any(k in title for k in negative_keywords):
+            sentiment_score -= 1
 
     return {
         "symbol": symbol.upper(),
@@ -144,7 +147,7 @@ async def analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
             "latest_close": round(latest_close, 2),
             "price_change_percent": round(price_change_pct, 2),
             "trend": "up" if price_change > 0 else "down",
-            "news_sentiment": "positive" if sentiment_score > 0 else "neutral",
+            "news_sentiment": "positive" if sentiment_score > 0 else "negative" if sentiment_score < 0 else "neutral",
             **sek_data,
         },
         "dividends": dividends,

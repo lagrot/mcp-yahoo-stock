@@ -1,7 +1,9 @@
 import sqlite3
 import os
+import logging
 from typing import Any
 
+logger = logging.getLogger("mcp-yahoo-stock")
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".data", "ledger.db")
 
 def get_latest_delayed_prices(ticker: str | None = None) -> list[dict[str, Any]]:
@@ -11,11 +13,12 @@ def get_latest_delayed_prices(ticker: str | None = None) -> list[dict[str, Any]]
     Returns a list of price records.
     """
     if not os.path.exists(DB_PATH):
-        return [{"error": "Database not found", "path": DB_PATH}]
+        logger.warning(f"Local delayed price database not found at {DB_PATH}")
+        return []
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
     try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
         if ticker:
             cursor.execute('''
                 SELECT ticker, price, change_pct, timestamp 

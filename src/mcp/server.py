@@ -3,6 +3,7 @@ MCP Server implementation using FastMCP with robust logging and debug support.
 """
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
@@ -33,7 +34,9 @@ async def yahoo_finance_get_delayed_prices(ticker: str | None = None) -> dict[st
     """
     logger.info(f"Tool call: yahoo_finance_get_delayed_prices(ticker={ticker})")
     try:
-        prices = delayed_price_service.get_latest_delayed_prices(ticker=ticker)
+        clean_ticker = validate_symbol(ticker) if ticker else None
+        # Wrap blocking database call in asyncio.to_thread
+        prices = await asyncio.to_thread(delayed_price_service.get_latest_delayed_prices, ticker=clean_ticker)
         return {"delayed_prices": prices}
     except Exception as e:
         logger.error(f"Error in yahoo_finance_get_delayed_prices: {str(e)}", exc_info=True)
@@ -61,8 +64,6 @@ async def yahoo_finance_search_symbol(query: str, limit: int = 5) -> dict[str, A
 
 @mcp.tool()
 async def yahoo_finance_analyze_stock(symbol: str, period: str = "3mo") -> dict[str, Any]:
-# ... (rest of function remains same)
-
     """
     [PRIMARY SOURCE] OFFICIAL Yahoo Finance deep-dive analysis for a SPECIFIC ticker.
 
@@ -76,7 +77,7 @@ async def yahoo_finance_analyze_stock(symbol: str, period: str = "3mo") -> dict[
     """
     with tracer.start_as_current_span("analyze_stock") as span:
         span.set_attribute("symbol", symbol)
-        logger.info(f"Tool call: yahoo_finance_analyze_stock(symbol={symbol})")
+        logger.info(f"Tool call: yahoo_finance_analyze_stock(symbol={symbol}, period={period})")
         try:
             clean_symbol = validate_symbol(symbol)
             return await stock_service.analyze_stock(clean_symbol, period)
@@ -95,17 +96,18 @@ async def yahoo_finance_lookup_and_analyze(query: str, period: str = "3mo") -> d
     """
     with tracer.start_as_current_span("lookup_and_analyze") as span:
         span.set_attribute("query", query)
-        logger.info(f"Tool call: yahoo_finance_lookup_and_analyze(query={query})")
+        logger.info(f"Tool call: yahoo_finance_lookup_and_analyze(query={query}, period={period})")
         try:
+            clean_query = validate_query(query)
             # 1. Search for the best match
-            results = await yfinance_client.search_symbol(query)
+            results = await yfinance_client.search_symbol(clean_query)
             if not results:
-                return {"error": f"No ticker found for '{query}'"}
+                return {"error": f"No ticker found for '{clean_query}'"}
 
             # 2. Pick the top result
             symbol = results[0]["symbol"]
             span.set_attribute("symbol", symbol)
-            logger.info(f"Found ticker {symbol} for query '{query}'")
+            logger.info(f"Found ticker {symbol} for query '{clean_query}'")
 
             # 3. Analyze
             return await stock_service.analyze_stock(symbol, period)
